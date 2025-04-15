@@ -198,20 +198,34 @@ public final class MappingLookup implements Iterable<Mapper> {
 
     private void checkObjectDepthLimit(long limit) {
         for (String objectPath : objectMappers.keySet()) {
-            int numDots = 0;
-            for (int i = 0; i < objectPath.length(); ++i) {
-                if (objectPath.charAt(i) == '.') {
-                    numDots += 1;
-                }
-            }
-            final int depth = numDots + 2;
-            if (depth > limit) {
+          checkObjectDepthLimit(limit, objectPath);
+        }
+    }
+
+    static void checkObjectDepthLimit(long limit, String objectPath) {
+        if (objectPath == null) {
+            throw new IllegalArgumentException("Object path cannot be null");
+        }
+        
+    int numDots = 0;
+    for (int i = 0; i < objectPath.length(); ++i) {
+        if (objectPath.charAt(i) == '.') {
+            numDots++;
+            
+            // Short-circuit as soon as we exceed the limit
+            if (numDots + 2 > limit) {
                 throw new IllegalArgumentException(
                     "Limit of mapping depth [" + limit + "] has been exceeded due to object field [" + objectPath + "]"
                 );
             }
+            
+            // Prevent potential integer overflow
+            if (numDots >= Integer.MAX_VALUE - 2) {
+                throw new IllegalArgumentException("Object path depth is too large");
+            }
         }
     }
+}
 
     private void checkFieldNameLengthLimit(long limit) {
         Stream.of(objectMappers.values().stream(), fieldMappers.values().stream())
